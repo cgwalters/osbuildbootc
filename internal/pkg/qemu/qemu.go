@@ -854,22 +854,19 @@ func (builder *QemuBuilder) Append(args ...string) {
 
 // baseQemuArgs takes a board and returns the basic qemu
 // arguments needed for the current architecture.
-func baseQemuArgs(arch string, memoryMiB int) ([]string, error) {
+func (builder *QemuBuilder) baseQemuArgs() ([]string, error) {
 	// memoryDevice is the object identifier we use for the backing RAM
 	const memoryDevice = "mem"
 
-	kvm := true
-	hostArch := coreosarch.CurrentRpmArch()
 	// The machine argument needs to reference our memory device; see below
 	machineArg := "memory-backend=" + memoryDevice
 	accel := "accel=kvm"
-	if _, ok := os.LookupEnv("OSBUILD_NO_KVM"); ok || hostArch != arch {
+	if !builder.KVM {
 		accel = "accel=tcg"
-		kvm = false
 	}
 	machineArg += "," + accel
 	var ret []string
-	switch arch {
+	switch builder.architecture {
 	case "x86_64":
 		ret = []string{
 			"qemu-system-x86_64",
@@ -893,12 +890,12 @@ func baseQemuArgs(arch string, memoryMiB int) ([]string, error) {
 			"-machine", "pseries,kvm-type=HV," + machineArg,
 		}
 	default:
-		return nil, fmt.Errorf("architecture %s not supported for qemu", arch)
+		return nil, fmt.Errorf("architecture %s not supported for qemu", builder.architecture)
 	}
-	if kvm {
+	if builder.KVM {
 		ret = append(ret, "-cpu", "host")
 	} else {
-		if arch == "x86_64" {
+		if builder.architecture == "x86_64" {
 			// the default qemu64 CPU model does not support x86_64_v2
 			// causing crashes on EL9+ kernels
 			// see https://bugzilla.redhat.com/show_bug.cgi?id=2060839
@@ -906,8 +903,8 @@ func baseQemuArgs(arch string, memoryMiB int) ([]string, error) {
 		}
 	}
 	// And define memory using a memfd (in shared mode), which is needed for virtiofs
-	ret = append(ret, "-object", fmt.Sprintf("memory-backend-memfd,id=%s,size=%dM,share=on", memoryDevice, memoryMiB))
-	ret = append(ret, "-m", fmt.Sprintf("%d", memoryMiB))
+	ret = append(ret, "-object", fmt.Sprintf("memory-backend-memfd,id=%s,size=%dM,share=on", memoryDevice, builder.MemoryMiB))
+	ret = append(ret, "-m", fmt.Sprintf("%d", builder.MemoryMiB))
 	return ret, nil
 }
 
@@ -1039,24 +1036,35 @@ func (builder *QemuBuilder) Exec() (*QemuInstance, error) {
 		}
 	}()
 
-	argv, err := baseQemuArgs(builder.architecture, builder.MemoryMiB)
+	if builder.KVM {
+		hostArch := coreosarch.CurrentRpmArch()
+		if _, ok := os.LookupEnv("OSBUILD_NO_KVM"); ok || hostArch != builder.architecture {
+			builder.KVM = false
+		}
+	}
+
+	argv, err := builder.baseQemuArgs()
 	if err != nil {
 		return nil, err
 	}
 
 	if builder.Processors < 0 {
-		nproc, err := nproc.GetProcessors()
-		if err != nil {
-			return nil, errors.Wrapf(err, "qemu estimating processors")
-		}
-		// cap qemu smp at some reasonable level; sometimes our tooling runs
-		// on 32-core servers (64 hyperthreads) and there's no reason to
-		// try to match that.
-		if nproc > 16 {
-			nproc = 16
-		}
+		if !builder.KVM {
+			builder.Processors = 1
+		} else {
+			nproc, err := nproc.GetProcessors()
+			if err != nil {
+				return nil, errors.Wrapf(err, "qemu estimating processors")
+			}
+			// cap qemu smp at some reasonable level; sometimes our tooling runs
+			// on 32-core servers (64 hyperthreads) and there's no reason to
+			// try to match that.
+			if nproc > 16 {
+				nproc = 16
+			}
 
-		builder.Processors = int(nproc)
+			builder.Processors = int(nproc)
+		}
 	} else if builder.Processors == 0 {
 		builder.Processors = 1
 	}
