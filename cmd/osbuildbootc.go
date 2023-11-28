@@ -100,6 +100,9 @@ var (
 )
 
 func KVMPreflightCheck() error {
+	if _, ok := os.LookupEnv("OSBUILD_NO_KVM"); ok {
+		return nil
+	}
 	_, err := os.Stat("/dev/kvm")
 	if err != nil {
 		return fmt.Errorf("failed to access /dev/kvm; you can set OSBUILD_NO_KVM to bypass this at the cost of performance: %w", err)
