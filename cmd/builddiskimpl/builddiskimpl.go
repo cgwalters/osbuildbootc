@@ -56,6 +56,7 @@ func run(cmd *cobra.Command, args []string) error {
 	podmanArgs = append(podmanArgs, tmp)
 	podmanArgs = append(podmanArgs, "bootc", "install")
 	podmanArgs = append(podmanArgs, config.InstallArgs...)
+	podmanArgs = append(podmanArgs, "--generic-image")
 	disk, err := filepath.EvalSymlinks(config.Disk)
 	if err != nil {
 		return err
