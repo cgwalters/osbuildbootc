@@ -21,6 +21,7 @@ var (
 	targetImage     string
 	targetInsecure  bool
 	skipFetchCheck  bool
+	bootcLogLevel   string
 	sizeMiB         uint64
 	cmdBuildQcow2   = &cobra.Command{
 		Use:   "build-qcow2 [source container] [disk]",
@@ -55,6 +56,7 @@ var (
 				SourceTransport: sourceTransport,
 				Source:          source,
 				InstallArgs:     installArgs,
+				BootcLogLevel:   bootcLogLevel,
 				Disk:            "/dev/disk/by-id/virtio-target",
 			}
 			buf, err := json.Marshal(&config)
@@ -113,6 +115,7 @@ func KVMPreflightCheck() error {
 func init() {
 	rootCmd.AddCommand(cmdBuildQcow2)
 	cmdBuildQcow2.Flags().StringVar(&sourceTransport, "transport", "docker://", "Source image stransport")
+	cmdBuildQcow2.Flags().StringVar(&bootcLogLevel, "bootc-log-level", "", "Passed via env RUST_LOG= to bootc")
 	cmdBuildQcow2.Flags().Uint64VarP(&sizeMiB, "size", "", 10*1024, "Disk size in MiB")
 	cmdBuildQcow2.Flags().StringVarP(&targetImage, "target", "t", "", "Target image (e.g. quay.io/exampleuser/someimg:latest)")
 	cmdBuildQcow2.Flags().BoolVarP(&targetInsecure, "target-no-signature-verification", "I", false, "Disable signature verification for target")

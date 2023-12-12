@@ -14,6 +14,7 @@ type Config struct {
 	SourceTransport string   `json:"source-transport"`
 	Source          string   `json:"source"`
 	InstallArgs     []string `json:"installargs"`
+	BootcLogLevel   string   `json:"bootc-log-level"`
 	Disk            string   `json:"disk"`
 }
 
@@ -53,6 +54,9 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	podmanArgs := []string{"run", "--net=host", "--rm", "--privileged", "--pid=host", "--security-opt", "label=type:unconfined_t"}
+	if config.BootcLogLevel != "" {
+		podmanArgs = append(podmanArgs, "--env", "RUST_LOG="+config.BootcLogLevel)
+	}
 	podmanArgs = append(podmanArgs, tmp)
 	podmanArgs = append(podmanArgs, "bootc", "install")
 	podmanArgs = append(podmanArgs, config.InstallArgs...)
