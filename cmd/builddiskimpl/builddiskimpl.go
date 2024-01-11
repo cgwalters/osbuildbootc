@@ -58,7 +58,7 @@ func run(cmd *cobra.Command, args []string) error {
 		podmanArgs = append(podmanArgs, "--env", "RUST_LOG="+config.BootcLogLevel)
 	}
 	podmanArgs = append(podmanArgs, tmp)
-	podmanArgs = append(podmanArgs, "bootc", "install")
+	podmanArgs = append(podmanArgs, "bootc", "install", "to-disk")
 	podmanArgs = append(podmanArgs, config.InstallArgs...)
 	podmanArgs = append(podmanArgs, "--generic-image")
 	disk, err := filepath.EvalSymlinks(config.Disk)
