@@ -23,7 +23,7 @@ to use full qemu emulation if necessary.
 ### Take a container image from remote registry, output a qcow2
 
 ```bash
-osbuildbootc build-qcow2 quay.io/centos-boot/fedora-boot-cloud:eln fedora-boot-cloud.qcow2
+osbuildbootc build-qcow2 quay.io/centos-bootc/fedora-bootc-cloud:eln fedora-boot-cloud.qcow2
 ```
 
 ### Take a container image stored in local OCI directory
